@@ -26,29 +26,20 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Home-Diagnose 0.6")
+        title("Streamer Remote — Home-Diagnose 0.9")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
-        val names = listOf("netflix" to "Netflix", "prime" to "Prime Video", "youtube" to "YouTube", "apps" to "All Apps")
-        val codeFields = RemoteConfig.defaultCodes.mapValues { (slot, default) ->
-            field("Tastencode: $slot", prefs.getInt("code_$slot", default).toString(), numeric = true)
-        }
-        val mapping = names.associate { (slot, label) ->
-            val hint = if (slot == "apps") "leer = App-Übersicht" else "leer = Standard-App"
-            slot to field("$label → Paketname auf dem Streamer ($hint)", prefs.getString(slot, "").orEmpty())
-        }
+        val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
         button("Einstellungen speichern") {
             val parsedPort = port.text.toString().toIntOrNull()
             if (parsedPort == null || parsedPort !in 1..65535) { Toast.makeText(this, "Ungültiger Port", Toast.LENGTH_SHORT).show(); return@button }
             if (!RemoteConfig.validIPv4(host.text.toString().trim())) { Toast.makeText(this, "Ungültige IPv4-Adresse", Toast.LENGTH_SHORT).show(); return@button }
-            val codes = codeFields.mapValues { (_, edit) -> edit.text.toString().toIntOrNull() }
-            if (codes.values.any { it == null || !RemoteConfig.validCode(it) } || codes.values.distinct().size != codes.size) {
-                Toast.makeText(this, "Tastencodes müssen gültig und verschieden sein", Toast.LENGTH_LONG).show(); return@button
+            val code = homeCode.text.toString().toIntOrNull()
+            if (code == null || !RemoteConfig.validCode(code)) {
+                Toast.makeText(this, "Ungültiger Home-Tastencode", Toast.LENGTH_SHORT).show(); return@button
             }
-            if (mapping.values.any { it.text.toString().trim().isNotBlank() && !RemoteCommand.isValidPackage(it.text.toString().trim()) }) { Toast.makeText(this, "Ungültiger Paketname", Toast.LENGTH_SHORT).show(); return@button }
             prefs.edit().putString("host", host.text.toString().trim()).putInt("port", parsedPort).apply {
-                mapping.forEach { (slot, edit) -> putString(slot, edit.text.toString().trim()) }
-                codes.forEach { (slot, code) -> putInt("code_$slot", code!!) }
+                putInt("code_home", code)
             }.apply()
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
         }
@@ -76,7 +67,7 @@ class MainActivity : Activity() {
         }
         button("Home-Diagnose aktualisieren") { refreshDiagnostic() }
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        title("Home: kurzer Druck bleibt Xiaomi. Langer Druck: Streamer Home (experimentell).")
+        title("Nur Home ist aktiv: kurz = Xiaomi-Startseite, lang = Streamer-Startseite.")
         title("Wichtig: Vorher Button Mapper als Tastenfilter deaktivieren. Nur eine Accessibility-App kann zuverlässig Key-Events filtern.")
         title("ADB muss auf dem Streamer eingeschaltet sein. Beim ersten Verbindungsversuch ggf. ADB-Schlüssel am Streamer autorisieren.")
     }
