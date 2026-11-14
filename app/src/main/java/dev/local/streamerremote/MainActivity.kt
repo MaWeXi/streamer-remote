@@ -22,7 +22,7 @@ class MainActivity : Activity() {
                 .putString("diag_ui_error", message).apply()
             setContentView(ScrollView(this).apply {
                 addView(TextView(this@MainActivity).apply {
-                    text = "Streamer Remote konnte nicht geöffnet werden:\\n\\n$message"
+                    text = "Streamer Remote konnte nicht geöffnet werden:\n\n$message"
                     textSize = 18f
                     setPadding(32, 32, 32, 32)
                 })
