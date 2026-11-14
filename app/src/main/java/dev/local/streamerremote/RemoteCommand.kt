@@ -28,6 +28,32 @@ object RemoteCommand {
         execute(context, "monkey -p $packageName -c android.intent.category.LEANBACK_LAUNCHER 1")
     }
 
+    fun listApps(context: Context, callback: (List<String>?, String?) -> Unit) {
+        val appContext = context.applicationContext
+        val prefs = appContext.getSharedPreferences("remote", Context.MODE_PRIVATE)
+        val host = prefs.getString("host", "")?.trim().orEmpty()
+        val port = prefs.getInt("port", 5555)
+        worker.execute {
+            try {
+                require(RemoteConfig.validIPv4(host) && port in 1..65535) { "Bitte IP-Adresse speichern" }
+                Kadb.create(host, port).use { adb ->
+                    val thirdParty = adb.shell("pm list packages -3")
+                    val all = adb.shell("pm list packages")
+                    if (thirdParty.exitCode != 0 || all.exitCode != 0) error("App-Liste konnte nicht gelesen werden")
+                    fun parse(output: String): Set<String> = output.lineSequence()
+                        .map { it.trim().removePrefix("package:") }
+                        .filter(RemoteCommand::isValidPackage).toSet()
+                    val installed = parse(all.output)
+                    val candidates = parse(thirdParty.output) + AppCatalog.labels.keys.filter { it in installed }
+                    val sorted = candidates.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { AppCatalog.label(it) })
+                    ui.post { callback(sorted, null) }
+                }
+            } catch (error: Exception) {
+                ui.post { callback(null, error.message ?: "ADB-Verbindung fehlgeschlagen") }
+            }
+        }
+    }
+
     fun execute(context: Context, command: String, notify: Boolean = false, diagnostic: String? = null) {
         val appContext = context.applicationContext
         val prefs = appContext.getSharedPreferences("remote", Context.MODE_PRIVATE)
