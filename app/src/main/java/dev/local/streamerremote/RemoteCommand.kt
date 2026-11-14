@@ -13,6 +13,7 @@ object RemoteCommand {
     private val ui = Handler(Looper.getMainLooper())
 
     fun home(context: Context) = execute(context, "input keyevent 3")
+    fun testHome(context: Context) = execute(context, "input keyevent 3", notify = true)
 
     fun isValidPackage(packageName: String): Boolean =
         packageName.matches(Regex("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+"))
@@ -33,7 +34,8 @@ object RemoteCommand {
                 require(RemoteConfig.validIPv4(host) && port in 1..65535) { "IP-Adresse oder Port fehlt/ist ungültig" }
                 Kadb.create(host, port).use { adb ->
                     val result = adb.shell(command)
-                    if (notify) ui.post { Toast.makeText(appContext, "ADB: ${result.output.take(160)}", Toast.LENGTH_LONG).show() }
+                    if (result.exitCode != 0) error("ADB-Befehl fehlgeschlagen: ${result.output.take(160)}")
+                    if (notify) ui.post { Toast.makeText(appContext, "ADB-Befehl erfolgreich gesendet", Toast.LENGTH_LONG).show() }
                 }
             } catch (e: Exception) {
                 ui.post { Toast.makeText(appContext, "ADB fehlgeschlagen: ${e.message}", Toast.LENGTH_LONG).show() }
