@@ -46,7 +46,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Streamer Remote 0.12")
+        title("Streamer Remote — Streamer Remote 0.13")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
@@ -152,7 +152,8 @@ class MainActivity : Activity() {
         val appDiagnostic = TextView(this).apply { textSize = 17f; setPadding(0, 8, 0, 8) }
         root.addView(appDiagnostic)
         fun refreshAppDiagnostic() {
-            appDiagnostic.text = slots.joinToString("\n\n") { (slot, label) ->
+            val context = prefs.getString("diag_apps_context", null) ?: "Sichtbare Oberfläche: noch nicht erkannt"
+            appDiagnostic.text = context + "\n\n" + slots.joinToString("\n\n") { (slot, label) ->
                 val received = prefs.getString("diag_key_$slot", null) ?: "kein Tastendruck empfangen"
                 val action = prefs.getString("diag_action_$slot", null) ?: "kein ADB-Befehl"
                 "$label: $received\n$action"
@@ -171,6 +172,7 @@ class MainActivity : Activity() {
         }
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         title("Home: kurz = Xiaomi-Startseite, lang = Streamer-Startseite.")
+        title("Apps: auf dem Streamer dessen App-Übersicht, auf Xiaomi dessen Apps. Apps auf Xiaomi lange halten öffnet diese Konfiguration direkt.")
         title("Wichtig: Vorher Button Mapper als Tastenfilter deaktivieren. Nur eine Accessibility-App kann zuverlässig Key-Events filtern.")
         title("ADB muss auf dem Streamer eingeschaltet sein. Beim ersten Verbindungsversuch ggf. ADB-Schlüssel am Streamer autorisieren.")
     }
