@@ -140,8 +140,29 @@ class MainActivity : Activity() {
             refreshDiagnostic()
         }
         button("Home-Diagnose aktualisieren") { refreshDiagnostic() }
+        title("App-Tasten-Diagnose")
+        val appDiagnostic = TextView(this).apply { textSize = 17f; setPadding(0, 8, 0, 8) }
+        root.addView(appDiagnostic)
+        fun refreshAppDiagnostic() {
+            appDiagnostic.text = slots.joinToString("\n\n") { (slot, label) ->
+                val received = prefs.getString("diag_key_$slot", null) ?: "kein Tastendruck empfangen"
+                val action = prefs.getString("diag_action_$slot", null) ?: "kein ADB-Befehl"
+                "$label: $received\n$action"
+            }
+        }
+        refreshAppDiagnostic()
+        button("App-Tasten-Diagnose aktualisieren") { refreshAppDiagnostic() }
+        button("App-Tasten-Diagnose zurücksetzen") {
+            prefs.edit().apply {
+                slots.forEach { (slot, _) ->
+                    remove("diag_key_$slot")
+                    remove("diag_action_$slot")
+                }
+            }.apply()
+            refreshAppDiagnostic()
+        }
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        title("Nur Home ist aktiv: kurz = Xiaomi-Startseite, lang = Streamer-Startseite.")
+        title("Home: kurz = Xiaomi-Startseite, lang = Streamer-Startseite.")
         title("Wichtig: Vorher Button Mapper als Tastenfilter deaktivieren. Nur eine Accessibility-App kann zuverlässig Key-Events filtern.")
         title("ADB muss auf dem Streamer eingeschaltet sein. Beim ersten Verbindungsversuch ggf. ADB-Schlüssel am Streamer autorisieren.")
     }
