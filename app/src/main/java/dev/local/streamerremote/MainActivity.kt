@@ -56,21 +56,22 @@ class MainActivity : Activity() {
         val diagnostic = TextView(this).apply { textSize = 18f; setPadding(0, 8, 0, 8) }
         root.addView(diagnostic)
         fun refreshDiagnostic() {
-            val lines = listOf("diag_service", "diag_down", "diag_up", "diag_long", "diag_short", "diag_adb")
+            val lines = listOf("diag_service", "diag_down", "diag_up", "diag_long", "diag_short", "diag_adb", "last_key")
                 .map { prefs.getString(it, null) ?: when (it) {
                     "diag_service" -> "Bedienungshilfe: kein Start protokolliert"
                     "diag_down" -> "Home DOWN: nicht empfangen"
                     "diag_up" -> "Home UP: nicht empfangen"
                     "diag_long" -> "Langer Home-Druck: nicht erkannt"
                     "diag_short" -> "Kurzer Home-Druck: nicht erkannt"
-                    else -> "ADB durch Home-Taste: kein Befehl"
+                    "diag_adb" -> "ADB durch Home-Taste: kein Befehl"
+                    else -> "Letzte andere Taste: keine"
                 } }
             diagnostic.text = lines.joinToString("\n")
         }
         refreshDiagnostic()
         button("Home-Diagnose zurücksetzen") {
             prefs.edit().remove("diag_down").remove("diag_up").remove("diag_long")
-                .remove("diag_short").remove("diag_adb").apply()
+                .remove("diag_short").remove("diag_adb").remove("last_key").apply()
             refreshDiagnostic()
         }
         button("Home-Diagnose aktualisieren") { refreshDiagnostic() }
