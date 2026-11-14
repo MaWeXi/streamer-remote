@@ -6,7 +6,7 @@ android {
     namespace = "dev.local.streamerremote"
     compileSdk = 37
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-    defaultConfig { applicationId = "dev.local.streamerremote"; minSdk = 26; targetSdk = 32; versionCode = 1; versionName = "0.1" }
+    defaultConfig { applicationId = "dev.local.streamerremote"; minSdk = 26; targetSdk = 32; versionCode = 2; versionName = "0.4" }
 }
 dependencies {
     implementation("com.flyfishxu:kadb:2.1.4")
