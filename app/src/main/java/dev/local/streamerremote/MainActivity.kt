@@ -26,7 +26,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Prototyp 0.3")
+        title("Streamer Remote — Prototyp 0.4")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val names = listOf("netflix" to "Netflix", "prime" to "Prime Video", "youtube" to "YouTube", "apps" to "All Apps")
@@ -49,6 +49,13 @@ class MainActivity : Activity() {
             }.apply()
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
         }
+        val lastKey = TextView(this).apply { textSize = 18f }
+        root.addView(lastKey)
+        fun refreshLastKey() {
+            lastKey.text = "Zuletzt empfangene Taste: " + (prefs.getString("last_key", null) ?: "noch keine")
+        }
+        refreshLastKey()
+        button("Letzten Tastencode anzeigen") { refreshLastKey() }
         button("Home auf Streamer testen") { RemoteCommand.testHome(this) }
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         title("Home: kurzer Druck bleibt Xiaomi. Langer Druck: Streamer Home (experimentell).")
