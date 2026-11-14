@@ -49,10 +49,11 @@ class RemoteKeyService : AccessibilityService() {
                 }
                 KeyEvent.ACTION_UP -> {
                     handler.removeCallbacks(longHome)
+                    val wasDown = homeDown
                     homeDown = false
                     val wasLong = longHomeSent || SystemClock.uptimeMillis() - homeDownAt >= ViewConfiguration.getLongPressTimeout()
-                    if (homeDown && !longHomeSent && wasLong) RemoteCommand.home(this)
-                    if (homeDown && !wasLong) performGlobalAction(GLOBAL_ACTION_HOME)
+                    if (wasDown && !longHomeSent && wasLong) RemoteCommand.home(this)
+                    if (wasDown && !wasLong) performGlobalAction(GLOBAL_ACTION_HOME)
                     longHomeSent = false
                     return true
                 }
