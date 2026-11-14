@@ -68,6 +68,13 @@ class MainActivity : Activity() {
             }
             updateChoice()
             choice.setOnClickListener {
+                val currentHost = host.text.toString().trim()
+                val currentPort = port.text.toString().toIntOrNull()
+                if (!RemoteConfig.validIPv4(currentHost) || currentPort == null || currentPort !in 1..65535) {
+                    Toast.makeText(this, "Bitte zuerst Streamer-IP und Port eingeben", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                prefs.edit().putString("host", currentHost).putInt("port", currentPort).apply()
                 Toast.makeText(this, "Lese Apps vom Streamer…", Toast.LENGTH_SHORT).show()
                 RemoteCommand.listApps(this) { packages, error ->
                     if (isFinishing || isDestroyed) return@listApps
