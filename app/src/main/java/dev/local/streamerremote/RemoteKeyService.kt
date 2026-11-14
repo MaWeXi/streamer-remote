@@ -91,6 +91,10 @@ class RemoteKeyService : AccessibilityService() {
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             prefs.edit().putString("diag_key_$slot",
                 "$slot empfangen um ${stamp()} (Code ${event.keyCode})").apply()
+            if (!prefs.getBoolean("enable_app_keys", false)) {
+                prefs.edit().putString("diag_action_$slot", "Umleitung ausgeschaltet").apply()
+                return false
+            }
             val pkg = prefs.getString(slot, null)?.takeIf { it.isNotBlank() }
                 ?: RemoteConfig.defaultPackages[slot].orEmpty()
             if (slot == "apps" && pkg.isBlank()) {
@@ -101,6 +105,6 @@ class RemoteKeyService : AccessibilityService() {
                 prefs.edit().putString("diag_action_$slot", "Keine gültige App gewählt").apply()
             }
         }
-        return true
+        return prefs.getBoolean("enable_app_keys", false)
     }
 }
