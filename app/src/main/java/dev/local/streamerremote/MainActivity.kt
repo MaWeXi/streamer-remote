@@ -8,10 +8,29 @@ import android.provider.Settings
 import android.view.ViewGroup
 import android.text.InputType
 import android.widget.*
+import android.util.Log
 
 class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            showScreen()
+        } catch (error: Throwable) {
+            Log.e("StreamerRemote", "Main screen failed", error)
+            val message = error.stackTraceToString().take(3000)
+            getSharedPreferences("remote", Context.MODE_PRIVATE).edit()
+                .putString("diag_ui_error", message).apply()
+            setContentView(ScrollView(this).apply {
+                addView(TextView(this@MainActivity).apply {
+                    text = "Streamer Remote konnte nicht geöffnet werden:\\n\\n$message"
+                    textSize = 18f
+                    setPadding(32, 32, 32, 32)
+                })
+            })
+        }
+    }
+
+    private fun showScreen() {
         val prefs = getSharedPreferences("remote", Context.MODE_PRIVATE)
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(36, 24, 36, 24) }
         val scroll = ScrollView(this).apply { addView(root) }
@@ -26,7 +45,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Home-Diagnose 0.9")
+        title("Streamer Remote — Home-Diagnose 0.10")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
@@ -44,6 +63,7 @@ class MainActivity : Activity() {
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
         }
         title("Home-Diagnose")
+        prefs.getString("diag_app_error", null)?.let { title("Startfehler: $it") }
         val diagnostic = TextView(this).apply { textSize = 18f; setPadding(0, 8, 0, 8) }
         root.addView(diagnostic)
         fun refreshDiagnostic() {
