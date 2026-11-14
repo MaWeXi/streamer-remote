@@ -85,14 +85,7 @@ class RemoteKeyService : AccessibilityService() {
             }
             return false
         }
-        val slot = RemoteConfig.defaultCodes.keys.firstOrNull {
-            it != "home" && event.keyCode == RemoteConfig.code(prefs, it)
-        } ?: return false
-        val pkg = prefs.getString(slot, null)?.takeIf { it.isNotBlank() } ?: RemoteConfig.defaultPackages[slot].orEmpty()
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-            if (slot == "apps" && pkg.isBlank()) RemoteCommand.allApps(this)
-            else if (RemoteCommand.isValidPackage(pkg)) RemoteCommand.launch(this, pkg)
-        }
-        return true
+        // Other remote buttons remain under Xiaomi control while Home is being validated.
+        return false
     }
 }
