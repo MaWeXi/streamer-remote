@@ -46,7 +46,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Streamer Remote 0.11")
+        title("Streamer Remote — Streamer Remote 0.12")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
@@ -59,6 +59,14 @@ class MainActivity : Activity() {
         val selectedApps = slots.associate { (slot, _) ->
             slot to (prefs.getString(slot, null) ?: RemoteConfig.defaultPackages[slot].orEmpty())
         }.toMutableMap()
+        val appKeysEnabled = CheckBox(this).apply {
+            text = "App-Tasten zum Streamer umleiten (Test)"
+            isChecked = prefs.getBoolean("enable_app_keys", false)
+            setOnCheckedChangeListener { _, enabled ->
+                prefs.edit().putBoolean("enable_app_keys", enabled).apply()
+            }
+        }
+        root.addView(appKeysEnabled)
         title("Apps auf dem Streamer auswählen")
         slots.forEach { (slot, label) ->
             val choice = Button(this)
