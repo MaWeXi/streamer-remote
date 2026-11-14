@@ -1,6 +1,9 @@
 package dev.local.streamerremote
 
 import android.accessibilityservice.AccessibilityService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
@@ -16,8 +19,18 @@ class RemoteKeyService : AccessibilityService() {
     private val longHome = Runnable {
         if (homeDown && !longHomeSent) {
             longHomeSent = true
+            getSharedPreferences("remote", MODE_PRIVATE).edit()
+                .putString("diag_long", "Langer Home-Druck erkannt um ${stamp()}").apply()
             RemoteCommand.home(this)
         }
+    }
+
+    private fun stamp(): String = SimpleDateFormat("HH:mm:ss", Locale.GERMANY).format(Date())
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        getSharedPreferences("remote", MODE_PRIVATE).edit()
+            .putString("diag_service", "Aktiv seit ${stamp()}").apply()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -36,6 +49,7 @@ class RemoteKeyService : AccessibilityService() {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount == 0) {
+                        prefs.edit().putString("diag_down", "Home DOWN empfangen um ${stamp()} (Code ${event.keyCode})").apply()
                         homeDown = true
                         homeDownAt = SystemClock.uptimeMillis()
                         longHomeSent = false
@@ -49,11 +63,18 @@ class RemoteKeyService : AccessibilityService() {
                 }
                 KeyEvent.ACTION_UP -> {
                     handler.removeCallbacks(longHome)
+                    prefs.edit().putString("diag_up", "Home UP empfangen um ${stamp()}").apply()
                     val wasDown = homeDown
                     homeDown = false
                     val wasLong = longHomeSent || SystemClock.uptimeMillis() - homeDownAt >= ViewConfiguration.getLongPressTimeout()
-                    if (wasDown && !longHomeSent && wasLong) RemoteCommand.home(this)
-                    if (wasDown && !wasLong) performGlobalAction(GLOBAL_ACTION_HOME)
+                    if (wasDown && !longHomeSent && wasLong) {
+                        prefs.edit().putString("diag_long", "Langer Home-Druck beim Loslassen erkannt um ${stamp()}").apply()
+                        RemoteCommand.home(this)
+                    }
+                    if (wasDown && !wasLong) {
+                        prefs.edit().putString("diag_short", "Kurzer Home-Druck um ${stamp()}").apply()
+                        performGlobalAction(GLOBAL_ACTION_HOME)
+                    }
                     longHomeSent = false
                     return true
                 }
