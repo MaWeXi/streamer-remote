@@ -1,6 +1,7 @@
 package dev.local.streamerremote
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Intent
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -16,6 +17,15 @@ class RemoteKeyService : AccessibilityService() {
     private var homeDown = false
     private var homeDownAt = 0L
     private var longHomeSent = false
+    private var viewingTvInput = false
+    private var appsDown = false
+    private var appsShortcutOpened = false
+    private val openConfigFromApps = Runnable {
+        if (appsDown && !viewingTvInput) {
+            appsShortcutOpened = true
+            startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
     private val longHome = Runnable {
         if (homeDown && !longHomeSent) {
             longHomeSent = true
@@ -33,10 +43,20 @@ class RemoteKeyService : AccessibilityService() {
             .putString("diag_service", "Aktiv seit ${stamp()}").apply()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        val pkg = event.packageName?.toString() ?: return
+        when (pkg) {
+            "com.mitv.livetv" -> viewingTvInput = true
+            "com.google.android.apps.tv.launcherx", packageName, "com.android.tv.settings" -> viewingTvInput = false
+        }
+        getSharedPreferences("remote", MODE_PRIVATE).edit()
+            .putString("diag_apps_context", "Sichtbare Oberfläche: $pkg; TV-Eingang: $viewingTvInput").apply()
+    }
     override fun onInterrupt() = Unit
     override fun onDestroy() {
         handler.removeCallbacks(longHome)
+        handler.removeCallbacks(openConfigFromApps)
         super.onDestroy()
     }
 
@@ -88,6 +108,28 @@ class RemoteKeyService : AccessibilityService() {
         val slot = RemoteConfig.defaultCodes.keys.firstOrNull {
             it != "home" && event.keyCode == RemoteConfig.code(prefs, it)
         } ?: return false
+        if (slot == "apps" && !viewingTvInput) {
+            when (event.action) {
+                KeyEvent.ACTION_DOWN -> {
+                    if (event.repeatCount == 0) {
+                        appsDown = true
+                        appsShortcutOpened = false
+                        handler.removeCallbacks(openConfigFromApps)
+                        handler.postDelayed(openConfigFromApps,
+                            ViewConfiguration.getLongPressTimeout().toLong())
+                    }
+                }
+                KeyEvent.ACTION_UP -> {
+                    appsDown = false
+                    handler.removeCallbacks(openConfigFromApps)
+                }
+            }
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                prefs.edit().putString("diag_key_apps", "Apps auf Xiaomi um ${stamp()} (Code ${event.keyCode})").apply()
+                prefs.edit().putString("diag_action_apps", "Xiaomi-App-Übersicht; lang = Streamer Remote").apply()
+            }
+            return false
+        }
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             prefs.edit().putString("diag_key_$slot",
                 "$slot empfangen um ${stamp()} (Code ${event.keyCode})").apply()
