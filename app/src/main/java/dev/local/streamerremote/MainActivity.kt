@@ -65,7 +65,7 @@ class MainActivity : Activity() {
                     "diag_short" -> "Kurzer Home-Druck: nicht erkannt"
                     else -> "ADB durch Home-Taste: kein Befehl"
                 } }
-            diagnostic.text = lines.joinToString("\\n")
+            diagnostic.text = lines.joinToString("\n")
         }
         refreshDiagnostic()
         button("Home-Diagnose zurücksetzen") {
