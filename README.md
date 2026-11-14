@@ -1,6 +1,6 @@
 # Streamer Remote — reviewed source (v0.3)
 
-**Status: source only. No APK was built or tested on hardware.** The original v0.1 ZIP was inspected; this version fixes key handling, input validation, and makes the streamer address and incoming keycodes configurable. The Kadb dependency and its authentication behavior remain unverified. Do not sideload this as a proven solution.
+**Status: GitHub Actions builds a debug APK; no hardware test has been performed.** The original v0.1 ZIP was inspected; this version fixes key handling, input validation, and makes the streamer address and incoming keycodes configurable. The Kadb library compiles; its authentication behavior on the actual streamer remains unverified. Treat the APK as an experimental test build.
 
 ## Intended behavior
 
@@ -8,11 +8,7 @@
 - Netflix (193), Prime Video (194), YouTube (190), All Apps (284) each map to a manually entered package name on the streamer. Blank leaves the original key action.
 - Enter the streamer IPv4 address in the app; the field starts empty. ADB port defaults to 5555. Commands go directly over authenticated ADB on the LAN. No Google login, HTTP server, cloud, or continuously running Mac is intended. Voice assistant is out of scope.
 
-## Build prerequisites
-
-Install Android Studio, JDK 17, Android SDK Platform 35, and the Android SDK build tools. Open this folder in Android Studio, sync Gradle, then choose Build > Build Bundle(s) / APK(s) > Build APK(s). The result, if the build succeeds, is `app/build/outputs/apk/debug/app-debug.apk`. There is no Gradle wrapper in this source archive; Android Studio can supply Gradle. **Resolve any Kadb API or dependency errors before installing.** A successful build alone does not prove ADB authentication or key interception.
-
-## Initial ADB setup on the streamer
+## Download the test APK\n\nOpen the latest successful [Build debug APK run](https://github.com/MaWeXi/streamer-remote/actions/workflows/build-apk.yml), download the `streamer-remote-debug-apk` artifact, and unzip it to obtain `app-debug.apk`. No Android Studio installation on your Mac is needed. Each cloud build uses a fresh debug signing key, so a later APK may require uninstalling the old test version first (which clears its settings). This APK was compiled but has not been installed or tested on the Xiaomi or streamer.\n\n## Initial ADB setup on the streamer
 
 1. On Google TV Streamer, enable Developer options and ADB debugging. Keep streamer and Xiaomi on the same trusted LAN. Reserve its chosen IP address in the router.
 2. Confirm which ADB mode the streamer offers. For classic TCP ADB at port 5555, authorize the *Xiaomi app's own ADB key* on the streamer's screen when the app first connects. A Mac's previously authorized key does **not** authorize the app. The current source has no proven persistent key setup, so this is a required on-device validation.
@@ -31,7 +27,7 @@ Install Android Studio, JDK 17, Android SDK Platform 35, and the Android SDK bui
 - v0.1 used only `KeyEvent.isLongPress`, which some remotes never set. v0.3 also measures press duration using Android's long-press timeout.
 - v0.1 accepted invalid package names and silently ignored them later. v0.3 validates on save.
 - Short Home may be processed by Xiaomi immediately on key-down, before long press is known. Thus the device may switch to Xiaomi Home even when long Home eventually sends a streamer command. Only on-device testing can establish the actual behavior.
-- The selected Kadb library (`com.flyfishxu:kadb:2.1.4`) was never compiled or validated in this environment. Persistent authenticated ADB identity has not been demonstrated.
+- The selected Kadb library (`com.flyfishxu:kadb:2.1.4`) compiles in the cloud build. Persistent authenticated ADB identity has not been demonstrated on the devices.
 - Only one accessibility key-filter service should be active during testing.
 
 ## Configurable incoming keycodes
