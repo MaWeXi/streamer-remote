@@ -49,7 +49,7 @@ class MainActivity : Activity() {
             }.apply()
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
         }
-        button("Home auf Streamer testen") { RemoteCommand.home(this) }
+        button("Home auf Streamer testen") { RemoteCommand.testHome(this) }
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         title("Home: kurzer Druck bleibt Xiaomi. Langer Druck: Streamer Home (experimentell).")
         title("Wichtig: Vorher Button Mapper als Tastenfilter deaktivieren. Nur eine Accessibility-App kann zuverlässig Key-Events filtern.")
