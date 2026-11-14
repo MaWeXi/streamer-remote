@@ -26,14 +26,17 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Prototyp 0.4")
+        title("Streamer Remote — Prototyp 0.5")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val names = listOf("netflix" to "Netflix", "prime" to "Prime Video", "youtube" to "YouTube", "apps" to "All Apps")
         val codeFields = RemoteConfig.defaultCodes.mapValues { (slot, default) ->
             field("Tastencode: $slot", prefs.getInt("code_$slot", default).toString(), numeric = true)
         }
-        val mapping = names.associate { (slot, label) -> slot to field("$label → Paketname auf dem Streamer (leer = unverändert)", prefs.getString(slot, "").orEmpty()) }
+        val mapping = names.associate { (slot, label) ->
+            val hint = if (slot == "apps") "leer = App-Übersicht" else "leer = Standard-App"
+            slot to field("$label → Paketname auf dem Streamer ($hint)", prefs.getString(slot, "").orEmpty())
+        }
         button("Einstellungen speichern") {
             val parsedPort = port.text.toString().toIntOrNull()
             if (parsedPort == null || parsedPort !in 1..65535) { Toast.makeText(this, "Ungültiger Port", Toast.LENGTH_SHORT).show(); return@button }
