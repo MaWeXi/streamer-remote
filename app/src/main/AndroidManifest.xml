@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
-    <application android:label="Streamer Remote" android:theme="@android:style/Theme.Material.NoActionBar" android:usesCleartextTraffic="false">
+    <application android:name=".RemoteApp" android:label="Streamer Remote" android:theme="@android:style/Theme.Material.NoActionBar" android:usesCleartextTraffic="false">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
