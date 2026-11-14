@@ -43,7 +43,11 @@ class RemoteKeyService : AccessibilityService() {
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val prefs = getSharedPreferences("remote", MODE_PRIVATE)
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-            prefs.edit().putString("last_key", "${KeyEvent.keyCodeToString(event.keyCode)} (${event.keyCode})").apply()
+            if (event.keyCode !in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_BACK)) {
+                prefs.edit().putString("last_key", "${KeyEvent.keyCodeToString(event.keyCode)} (${event.keyCode}) um ${stamp()}").apply()
+            }
         }
         if (event.keyCode == RemoteConfig.code(prefs, "home")) {
             when (event.action) {
