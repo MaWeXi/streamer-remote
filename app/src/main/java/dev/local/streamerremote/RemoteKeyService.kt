@@ -39,6 +39,8 @@ class RemoteKeyService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        viewingTvInput = getSharedPreferences("remote", MODE_PRIVATE)
+            .getBoolean("viewing_tv_input", false)
         getSharedPreferences("remote", MODE_PRIVATE).edit()
             .putString("diag_service", "Aktiv seit ${stamp()}").apply()
     }
@@ -51,6 +53,7 @@ class RemoteKeyService : AccessibilityService() {
             "com.google.android.apps.tv.launcherx", packageName, "com.android.tv.settings" -> viewingTvInput = false
         }
         getSharedPreferences("remote", MODE_PRIVATE).edit()
+            .putBoolean("viewing_tv_input", viewingTvInput)
             .putString("diag_apps_context", "Sichtbare Oberfläche: $pkg; TV-Eingang: $viewingTvInput").apply()
     }
     override fun onInterrupt() = Unit
