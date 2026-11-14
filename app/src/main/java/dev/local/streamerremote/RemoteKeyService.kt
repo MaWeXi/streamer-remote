@@ -63,9 +63,11 @@ class RemoteKeyService : AccessibilityService() {
         val slot = RemoteConfig.defaultCodes.keys.firstOrNull {
             it != "home" && event.keyCode == RemoteConfig.code(prefs, it)
         } ?: return false
-        val pkg = prefs.getString(slot, "").orEmpty()
-        if (pkg.isBlank() || !RemoteCommand.isValidPackage(pkg)) return false
-        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) RemoteCommand.launch(this, pkg)
+        val pkg = prefs.getString(slot, null) ?: RemoteConfig.defaultPackages[slot].orEmpty()
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            if (slot == "apps" && pkg.isBlank()) RemoteCommand.allApps(this)
+            else if (RemoteCommand.isValidPackage(pkg)) RemoteCommand.launch(this, pkg)
+        }
         return true
     }
 }
