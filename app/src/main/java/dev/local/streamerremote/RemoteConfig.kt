@@ -5,6 +5,11 @@ import android.view.KeyEvent
 
 object RemoteConfig {
     val defaultCodes = linkedMapOf("home" to 3, "netflix" to 193, "prime" to 194, "youtube" to 190, "apps" to 284)
+    val defaultPackages = mapOf(
+        "netflix" to "com.netflix.ninja",
+        "prime" to "com.amazon.amazonvideo.livingroom",
+        "youtube" to "com.google.android.youtube.tv"
+    )
 
     fun code(prefs: SharedPreferences, slot: String): Int =
         prefs.getInt("code_$slot", defaultCodes.getValue(slot))
