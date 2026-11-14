@@ -14,6 +14,7 @@ object RemoteCommand {
 
     fun home(context: Context) = execute(context, "input keyevent 3")
     fun testHome(context: Context) = execute(context, "input keyevent 3", notify = true)
+    fun allApps(context: Context) = execute(context, "input keyevent 284")
 
     fun isValidPackage(packageName: String): Boolean =
         packageName.matches(Regex("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+"))
@@ -21,7 +22,7 @@ object RemoteCommand {
     fun launch(context: Context, packageName: String) {
         // A package name is a single safe token. Never interpolate arbitrary shell input.
         if (!isValidPackage(packageName)) return
-        execute(context, "monkey -p $packageName -c android.intent.category.LAUNCHER 1")
+        execute(context, "monkey -p $packageName -c android.intent.category.LEANBACK_LAUNCHER 1")
     }
 
     fun execute(context: Context, command: String, notify: Boolean = false) {
