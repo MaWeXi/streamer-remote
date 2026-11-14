@@ -17,15 +17,15 @@ object RemoteCommand {
 
     fun home(context: Context) = execute(context, "input keyevent 3", diagnostic = "Home")
     fun testHome(context: Context) = execute(context, "input keyevent 3", notify = true)
-    fun allApps(context: Context) = execute(context, "input keyevent 284")
+    fun allApps(context: Context, diagnostic: String? = null) = execute(context, "input keyevent 284", diagnostic = diagnostic)
 
     fun isValidPackage(packageName: String): Boolean =
         packageName.matches(Regex("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+"))
 
-    fun launch(context: Context, packageName: String) {
+    fun launch(context: Context, packageName: String, diagnostic: String? = null) {
         // A package name is a single safe token. Never interpolate arbitrary shell input.
         if (!isValidPackage(packageName)) return
-        execute(context, "monkey -p $packageName -c android.intent.category.LEANBACK_LAUNCHER 1")
+        execute(context, "monkey -p $packageName -c android.intent.category.LEANBACK_LAUNCHER 1", diagnostic = diagnostic)
     }
 
     fun listApps(context: Context, callback: (List<String>?, String?) -> Unit) {
@@ -59,12 +59,13 @@ object RemoteCommand {
         val prefs = appContext.getSharedPreferences("remote", Context.MODE_PRIVATE)
         val host = prefs.getString("host", "")?.trim().orEmpty()
         val port = prefs.getInt("port", 5555)
-        if (diagnostic != null) prefs.edit().putString("diag_adb", "$diagnostic: Befehl wartet auf ADB").apply()
+        val diagnosticKey = if (diagnostic == "Home") "diag_adb" else "diag_action_$diagnostic"
+        if (diagnostic != null) prefs.edit().putString(diagnosticKey, "$diagnostic: Befehl wartet auf ADB").apply()
         worker.execute {
             fun result(message: String) {
                 if (diagnostic != null) {
                     val time = SimpleDateFormat("HH:mm:ss", Locale.GERMANY).format(Date())
-                    prefs.edit().putString("diag_adb", "$diagnostic um $time: $message").apply()
+                    prefs.edit().putString(diagnosticKey, "$diagnostic um $time: $message").apply()
                 }
             }
             try {
