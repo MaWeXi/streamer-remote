@@ -1,10 +1,10 @@
-# Streamer Remote — reviewed source (v0.3)
+# Streamer Remote — reviewed source (v0.4)
 
 **Status: GitHub Actions builds a debug APK; no hardware test has been performed.** The original v0.1 ZIP was inspected; this version fixes key handling, input validation, and makes the streamer address and incoming keycodes configurable. The Kadb library compiles; its authentication behavior on the actual streamer remains unverified. Treat the APK as an experimental test build.
 
 ## Intended behavior
 
-- On Xiaomi Mini LED S55 in Basic TV mode, short Home (3) should retain the Xiaomi action; long Home should send `input keyevent 3` to Google TV Streamer.
+- On Xiaomi Mini LED S55 in Basic TV mode, short Home (3) invokes Xiaomi Home on release; long Home is consumed and should send `input keyevent 3` to Google TV Streamer.
 - Netflix (193), Prime Video (194), YouTube (190), All Apps (284) each map to a manually entered package name on the streamer. Blank leaves the original key action.
 - Enter the streamer IPv4 address in the app; the field starts empty. ADB port defaults to 5555. Commands go directly over authenticated ADB on the LAN. No Google login, HTTP server, cloud, or continuously running Mac is intended. Voice assistant is out of scope.
 
@@ -32,4 +32,5 @@
 
 ## Configurable incoming keycodes
 
-The five incoming button codes default to Home 3, Netflix 193, Prime Video 194, YouTube 190, and All Apps 284. Each can be changed in the app. Codes must be valid and distinct. The outgoing ADB Home command remains Android keycode 3.
+The app also displays the last keycode received by its accessibility service. After pressing a remote button, reopen the app and choose **Letzten Tastencode anzeigen**. If it stays unchanged, that button did not reach the service.\n\nThe five incoming button codes default to Home 3, Netflix 193, Prime Video 194, YouTube 190, and All Apps 284. Each can be changed in the app. Codes must be valid and distinct. The outgoing ADB Home command remains Android keycode 3.
+\n## Home test on the Xiaomi\n\nThe built-in **Home auf Streamer testen** button proves only that the ADB command reaches the streamer; it does not test key interception on the Xiaomi. In v0.4 the service consumes Home down and up, sends long Home only to the streamer, and invokes Xiaomi Home only after a short release. Long Home must not open the Xiaomi Settings menu. If the Xiaomi still opens its own Home or Settings menu, inspect the last received keycode; the OEM may intercept Home before the service. The app does not request an HDMI input switch.\n
