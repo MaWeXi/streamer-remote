@@ -1,6 +1,7 @@
 package dev.local.streamerremote
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -49,6 +50,46 @@ class MainActivity : Activity() {
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
+        val slots = listOf("netflix" to "Netflix-Taste", "prime" to "Prime-Video-Taste",
+            "youtube" to "YouTube-Taste", "apps" to "Apps-Taste")
+        val keyCodes = slots.associate { (slot, label) ->
+            slot to field("Tastencode $label", prefs.getInt("code_$slot",
+                RemoteConfig.defaultCodes.getValue(slot)).toString(), numeric = true)
+        }
+        val selectedApps = slots.associate { (slot, _) ->
+            slot to (prefs.getString(slot, null) ?: RemoteConfig.defaultPackages[slot].orEmpty())
+        }.toMutableMap()
+        title("Apps auf dem Streamer auswählen")
+        slots.forEach { (slot, label) ->
+            val choice = Button(this)
+            fun updateChoice() {
+                val pkg = selectedApps[slot].orEmpty()
+                choice.text = "$label: " + if (pkg.isBlank()) "App-Übersicht" else AppCatalog.label(pkg)
+            }
+            updateChoice()
+            choice.setOnClickListener {
+                Toast.makeText(this, "Lese Apps vom Streamer…", Toast.LENGTH_SHORT).show()
+                RemoteCommand.listApps(this) { packages, error ->
+                    if (isFinishing || isDestroyed) return@listApps
+                    if (error != null || packages == null) {
+                        Toast.makeText(this, error ?: "App-Liste nicht verfügbar", Toast.LENGTH_LONG).show()
+                    } else {
+                        val options = if (slot == "apps") listOf("") + packages else packages
+                        val labels = options.map { pkg ->
+                            if (pkg.isBlank()) "App-Übersicht" else "${AppCatalog.label(pkg)} ($pkg)"
+                        }.toTypedArray()
+                        AlertDialog.Builder(this).setTitle("$label: App wählen")
+                            .setItems(labels) { _, index ->
+                                val pkg = options[index]
+                                selectedApps[slot] = pkg
+                                prefs.edit().putString(slot, pkg).apply()
+                                updateChoice()
+                            }.show()
+                    }
+                }
+            }
+            root.addView(choice)
+        }
         button("Einstellungen speichern") {
             val parsedPort = port.text.toString().toIntOrNull()
             if (parsedPort == null || parsedPort !in 1..65535) { Toast.makeText(this, "Ungültiger Port", Toast.LENGTH_SHORT).show(); return@button }
@@ -57,8 +98,14 @@ class MainActivity : Activity() {
             if (code == null || !RemoteConfig.validCode(code)) {
                 Toast.makeText(this, "Ungültiger Home-Tastencode", Toast.LENGTH_SHORT).show(); return@button
             }
+            val appCodes = keyCodes.mapValues { (_, edit) -> edit.text.toString().toIntOrNull() }
+            val allCodes = listOf(code) + appCodes.values.filterNotNull()
+            if (appCodes.values.any { it == null || !RemoteConfig.validCode(it) } || allCodes.distinct().size != 5) {
+                Toast.makeText(this, "Tastencodes müssen gültig und verschieden sein", Toast.LENGTH_LONG).show(); return@button
+            }
             prefs.edit().putString("host", host.text.toString().trim()).putInt("port", parsedPort).apply {
                 putInt("code_home", code)
+                appCodes.forEach { (slot, value) -> putInt("code_$slot", value!!) }
             }.apply()
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
         }
