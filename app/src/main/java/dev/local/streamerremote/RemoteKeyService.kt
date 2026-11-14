@@ -19,10 +19,8 @@ class RemoteKeyService : AccessibilityService() {
     private var longHomeSent = false
     private var viewingTvInput = false
     private var appsDown = false
-    private var appsShortcutOpened = false
     private val openConfigFromApps = Runnable {
         if (appsDown && !viewingTvInput) {
-            appsShortcutOpened = true
             startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
@@ -116,7 +114,6 @@ class RemoteKeyService : AccessibilityService() {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount == 0) {
                         appsDown = true
-                        appsShortcutOpened = false
                         handler.removeCallbacks(openConfigFromApps)
                         handler.postDelayed(openConfigFromApps,
                             ViewConfiguration.getLongPressTimeout().toLong())
