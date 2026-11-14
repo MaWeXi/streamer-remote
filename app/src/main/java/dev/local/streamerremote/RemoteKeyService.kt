@@ -1,6 +1,7 @@
 package dev.local.streamerremote
 
 import android.accessibilityservice.AccessibilityService
+import android.os.SystemClock
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
@@ -10,6 +11,7 @@ import android.view.accessibility.AccessibilityEvent
 class RemoteKeyService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var homeDown = false
+    private var homeDownAt = 0L
     private var longHomeSent = false
     private val longHome = Runnable {
         if (homeDown && !longHomeSent) {
@@ -27,11 +29,15 @@ class RemoteKeyService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         val prefs = getSharedPreferences("remote", MODE_PRIVATE)
+        if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            prefs.edit().putString("last_key", "${KeyEvent.keyCodeToString(event.keyCode)} (${event.keyCode})").apply()
+        }
         if (event.keyCode == RemoteConfig.code(prefs, "home")) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount == 0) {
                         homeDown = true
+                        homeDownAt = SystemClock.uptimeMillis()
                         longHomeSent = false
                         handler.removeCallbacks(longHome)
                         handler.postDelayed(longHome, ViewConfiguration.getLongPressTimeout().toLong())
@@ -39,14 +45,16 @@ class RemoteKeyService : AccessibilityService() {
                         handler.removeCallbacks(longHome)
                         longHome.run()
                     }
-                    return longHomeSent
+                    return true
                 }
                 KeyEvent.ACTION_UP -> {
                     handler.removeCallbacks(longHome)
                     homeDown = false
-                    val consumed = longHomeSent
+                    val wasLong = longHomeSent || SystemClock.uptimeMillis() - homeDownAt >= ViewConfiguration.getLongPressTimeout()
+                    if (homeDown && !longHomeSent && wasLong) RemoteCommand.home(this)
+                    if (homeDown && !wasLong) performGlobalAction(GLOBAL_ACTION_HOME)
                     longHomeSent = false
-                    return consumed
+                    return true
                 }
             }
             return false
