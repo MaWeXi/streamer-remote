@@ -3,9 +3,12 @@ package dev.local.streamerremote
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.widget.Toast
 import com.flyfishxu.kadb.Kadb
 import java.util.concurrent.Executors
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -13,11 +16,56 @@ import java.util.Locale
 /** Executes one command at a time, off the UI thread. No HTTP server or cloud service. */
 object RemoteCommand {
     private val worker = Executors.newSingleThreadExecutor()
+    private val repeatWorker = Executors.newCachedThreadPool()
+    private val activeRepeaters = ConcurrentHashMap<Int, AtomicBoolean>()
     private val ui = Handler(Looper.getMainLooper())
 
     fun home(context: Context) = execute(context, "input keyevent 3", diagnostic = "Home")
     fun testHome(context: Context) = execute(context, "input keyevent 3", notify = true)
     fun allApps(context: Context, diagnostic: String? = null) = execute(context, "input keyevent 284", diagnostic = diagnostic)
+
+    fun startAcceleratedKey(context: Context, keyCode: Int) {
+        if (keyCode !in setOf(19, 20, 21, 22) || activeRepeaters.containsKey(keyCode)) return
+        val running = AtomicBoolean(true)
+        if (activeRepeaters.putIfAbsent(keyCode, running) != null) return
+        val appContext = context.applicationContext
+        val prefs = appContext.getSharedPreferences("remote", Context.MODE_PRIVATE)
+        val host = prefs.getString("host", "")?.trim().orEmpty()
+        val port = prefs.getInt("port", 5555)
+        val startedAt = SystemClock.uptimeMillis()
+        prefs.edit().putString("diag_navigation_action", "Beschleunigte ADB-Wiederholung gestartet: Keycode $keyCode").apply()
+        repeatWorker.execute {
+            try {
+                require(RemoteConfig.validIPv4(host) && port in 1..65535) { "Streamer-IP/Port ungültig" }
+                Kadb.create(host, port).use { adb ->
+                    val first = adb.shell("input keyevent $keyCode")
+                    if (first.exitCode != 0) error(first.output.take(160))
+                    while (running.get()) {
+                        val heldMs = SystemClock.uptimeMillis() - startedAt
+                        val delay = when {
+                            heldMs < 700L -> 280L
+                            heldMs < 1500L -> 200L
+                            heldMs < 2500L -> 140L
+                            else -> 100L
+                        }
+                        Thread.sleep(delay)
+                        if (!running.get()) break
+                        val repeated = adb.shell("input keyevent $keyCode")
+                        if (repeated.exitCode != 0) error(repeated.output.take(160))
+                    }
+                }
+            } catch (error: Exception) {
+                prefs.edit().putString("diag_navigation_action", "ADB-Tastenwiederholung fehlgeschlagen: ${error.message}").apply()
+                ui.post { Toast.makeText(appContext, "ADB-Taste fehlgeschlagen: ${error.message}", Toast.LENGTH_LONG).show() }
+            } finally {
+                activeRepeaters.remove(keyCode, running)
+            }
+        }
+    }
+
+    fun stopAcceleratedKey(keyCode: Int) {
+        activeRepeaters[keyCode]?.set(false)
+    }
 
     fun isValidPackage(packageName: String): Boolean =
         packageName.matches(Regex("[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+"))

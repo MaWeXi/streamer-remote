@@ -36,6 +36,7 @@ class RemoteKeyService : AccessibilityService() {
     }
     private var longHomeSent = false
     private var viewingTvInput = false
+    private var activeNavigationKey: Int? = null
     private var appsDown = false
     private var appsDownAt = 0L
     private var appsLongHandled = false
@@ -83,11 +84,19 @@ class RemoteKeyService : AccessibilityService() {
             .putBoolean("viewing_tv_input", viewingTvInput)
             .putString("diag_apps_context", "Sichtbare Oberfläche: $pkg; TV-Eingang: $viewingTvInput").apply()
     }
-    override fun onInterrupt() = Unit
+    private fun stopNavigationRepeat() {
+        activeNavigationKey?.let { RemoteCommand.stopAcceleratedKey(it) }
+        activeNavigationKey = null
+    }
+
+    override fun onInterrupt() {
+        stopNavigationRepeat()
+    }
     override fun onDestroy() {
         handler.removeCallbacks(longHome)
         handler.removeCallbacks(returnToTv)
         handler.removeCallbacks(openConfigFromApps)
+        stopNavigationRepeat()
         super.onDestroy()
     }
 
@@ -112,6 +121,22 @@ class RemoteKeyService : AccessibilityService() {
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
         recordDiagnosticKey(event)
+        val navigationKeys = setOf(
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT
+        )
+        if (activeNavigationKey == event.keyCode && event.action == KeyEvent.ACTION_UP) {
+            stopNavigationRepeat()
+            return true
+        }
+        if (event.keyCode in navigationKeys && viewingTvInput) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                stopNavigationRepeat()
+                activeNavigationKey = event.keyCode
+                RemoteCommand.startAcceleratedKey(this, event.keyCode)
+            }
+            return true
+        }
         val prefs = getSharedPreferences("remote", MODE_PRIVATE)
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             if (event.keyCode !in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,

@@ -196,8 +196,9 @@ class MainActivity : Activity() {
         val navigationDiagnostic = TextView(this).apply { textSize = 16f; setPadding(0, 8, 0, 8) }
         root.addView(navigationDiagnostic)
         fun refreshNavigationDiagnostic() {
-            navigationDiagnostic.text = prefs.getString("diag_navigation", null)
-                ?: "Zurück, Pfeiltasten und Mikrofon: noch keine Signale empfangen"
+            navigationDiagnostic.text = (prefs.getString("diag_navigation_action", null)?.plus("\\n") ?: "") +
+                (prefs.getString("diag_navigation", null)
+                    ?: "Zurück, Pfeiltasten und Mikrofon: noch keine Signale empfangen")
         }
         refreshNavigationDiagnostic()
         button("Tastensignale aktualisieren") { refreshNavigationDiagnostic() }
