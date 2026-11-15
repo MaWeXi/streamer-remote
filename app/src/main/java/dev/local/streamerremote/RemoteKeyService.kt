@@ -21,6 +21,7 @@ class RemoteKeyService : AccessibilityService() {
     private val returnToTv = Runnable {
         if (returnToTvAfterShortHome) {
             returnToTvAfterShortHome = false
+            if (viewingTvInput) return@Runnable
             try {
                 startActivity(Intent().setClassName("com.mitv.livetv",
                     "com.mitv.livetv.tv.MainActivity")
