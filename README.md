@@ -2,12 +2,12 @@
 
 Android-TV-App für den Xiaomi Mini LED S55 im Basic-TV-Modus. Sie empfängt Tasten der Xiaomi-Fernbedienung über eine Bedienungshilfe und sendet ausgewählte Aktionen per authentifiziertem ADB im lokalen Netz an einen Google TV Streamer. Die App läuft auf dem Xiaomi; auf dem Streamer wird keine zusätzliche App installiert. Google-Anmeldung, HTTP-Server, dauerhaft laufender Mac und Sprachassistent sind nicht erforderlich.
 
-## Geprüfter Stand (v0.15)
+## Geprüfter Stand (v0.16)
 
 - Auf dem Streamer-HDMI-Bildschirm: kurzes Home sendet Home an den Streamer und hält bzw. stellt die HDMI-Ansicht wieder her. Langes Home öffnet die Xiaomi-Startseite.
 - Auf der Xiaomi-Oberfläche: Home führt zur Xiaomi-Startseite.
 - Netflix, Prime Video und YouTube können jeweils eine frei gewählte, auf dem Streamer installierte App öffnen.
-- Apps öffnet auf dem Streamer die App-Übersicht des Streamers und auf der Xiaomi-Oberfläche die Xiaomi-Apps. Langes Apps auf Xiaomi startet Streamer Remote direkt.
+- Apps öffnet auf dem Streamer die App-Übersicht des Streamers. Auf der Xiaomi-Oberfläche öffnet kurzes Apps nur die Xiaomi-Apps; langes Apps startet nur Streamer Remote direkt. Beide Aktionen werden von der App einzeln ausgelöst, sodass nach langem Apps keine Xiaomi-Übersicht mehr darüber erscheint.
 - Die Eingangstaste (Code 178) öffnet die Xiaomi-Eingangsauswahl direkt.
 - Die Tasten Home 3, Netflix 193, Prime Video 194, YouTube 190 und Apps 284 wurden auf dem Gerät empfangen und getestet. Die Eingangstaste wurde ebenfalls mit der echten Fernbedienung getestet.
 - Die ADB-Identität liegt im privaten dauerhaften App-Speicher. Cache-Löschen und Prozessneustarts erzeugen damit keinen neuen Schlüssel. Eine Deinstallation oder das Löschen von App-Daten entfernt ihn weiterhin.
