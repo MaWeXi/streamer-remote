@@ -91,7 +91,27 @@ class RemoteKeyService : AccessibilityService() {
         super.onDestroy()
     }
 
+    private fun recordDiagnosticKey(event: KeyEvent) {
+        val tracked = event.keyCode in setOf(
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_SEARCH
+        )
+        if (!tracked) return
+        val action = when (event.action) {
+            KeyEvent.ACTION_DOWN -> "DOWN"
+            KeyEvent.ACTION_UP -> "UP"
+            else -> "ACTION_" + event.action
+        }
+        val entry = stamp() + " " + KeyEvent.keyCodeToString(event.keyCode) + " " +
+            action + " repeat=" + event.repeatCount + " long=" + event.isLongPress
+        val prefs = getSharedPreferences("remote", MODE_PRIVATE)
+        val lines = (prefs.getString("diag_navigation", "").orEmpty().lines()
+            .filter { it.isNotBlank() } + entry).takeLast(60)
+        prefs.edit().putString("diag_navigation", lines.joinToString("\n")).apply()
+    }
+
     override fun onKeyEvent(event: KeyEvent): Boolean {
+        recordDiagnosticKey(event)
         val prefs = getSharedPreferences("remote", MODE_PRIVATE)
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             if (event.keyCode !in listOf(KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,

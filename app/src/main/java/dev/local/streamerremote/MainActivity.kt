@@ -5,6 +5,10 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.content.pm.PackageManager
 import android.provider.Settings
 import android.view.ViewGroup
 import android.text.InputType
@@ -12,6 +16,62 @@ import android.widget.*
 import android.util.Log
 
 class MainActivity : Activity() {
+    private var micDiagnosticText: TextView? = null
+
+    private fun startMicrophoneDiagnostic() {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 7101)
+            micDiagnosticText?.text = "Mikrofonberechtigung wird angefragt."
+            return
+        }
+        micDiagnosticText?.text = "Aufnahme läuft 6 Sekunden. Sprich in die Xiaomi-Fernbedienung und halte dabei ihre Mikrofontaste."
+        Thread {
+            var recorder: AudioRecord? = null
+            try {
+                val sampleRate = 16000
+                val minBytes = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT)
+                check(minBytes > 0) { "Audioeingang nicht verfügbar (Code $minBytes)" }
+                recorder = AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO,
+                    AudioFormat.ENCODING_PCM_16BIT, maxOf(minBytes, sampleRate))
+                check(recorder.state == AudioRecord.STATE_INITIALIZED) { "Audioeingang ließ sich nicht öffnen" }
+                recorder.startRecording()
+                val buffer = ShortArray(1024)
+                var frames = 0L
+                var squares = 0.0
+                var peak = 0
+                val deadline = System.currentTimeMillis() + 6000L
+                while (System.currentTimeMillis() < deadline) {
+                    val count = recorder.read(buffer, 0, buffer.size)
+                    if (count > 0) for (i in 0 until count) {
+                        val sample = buffer[i].toInt()
+                        peak = maxOf(peak, kotlin.math.abs(sample))
+                        squares += sample.toDouble() * sample
+                        frames++
+                    }
+                }
+                val rms = if (frames == 0L) 0.0 else kotlin.math.sqrt(squares / frames)
+                runOnUiThread {
+                    micDiagnosticText?.text = "Aufnahme beendet. Spitzenpegel: $peak / 32767; Durchschnitt: " +
+                        "%.0f".format(rms) + ". " +
+                        if (peak > 400) "Audio kam an." else "Kein messbarer Ton am App-Audioeingang."
+                }
+            } catch (error: Throwable) {
+                runOnUiThread { micDiagnosticText?.text = "Mikrofontest fehlgeschlagen: " + error.message }
+            } finally {
+                try { recorder?.stop() } catch (_: Exception) {}
+                recorder?.release()
+            }
+        }.start()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 7101) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) startMicrophoneDiagnostic()
+            else micDiagnosticText?.text = "Mikrofonberechtigung wurde abgelehnt."
+        }
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
@@ -46,7 +106,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Streamer Remote 0.16")
+        title("Streamer Remote — Streamer Remote 0.17")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
@@ -124,6 +184,23 @@ class MainActivity : Activity() {
             }.apply()
             Toast.makeText(this, "Gespeichert", Toast.LENGTH_SHORT).show()
         }
+        title("Tasten- und Mikrofon-Diagnose")
+        val navigationDiagnostic = TextView(this).apply { textSize = 16f; setPadding(0, 8, 0, 8) }
+        root.addView(navigationDiagnostic)
+        fun refreshNavigationDiagnostic() {
+            navigationDiagnostic.text = prefs.getString("diag_navigation", null)
+                ?: "Zurück, Pfeiltasten und Mikrofon: noch keine Signale empfangen"
+        }
+        refreshNavigationDiagnostic()
+        button("Tastensignale aktualisieren") { refreshNavigationDiagnostic() }
+        button("Tastensignale zurücksetzen") {
+            prefs.edit().remove("diag_navigation").apply()
+            refreshNavigationDiagnostic()
+        }
+        micDiagnosticText = TextView(this).apply { textSize = 16f; setPadding(0, 8, 0, 8) }
+        root.addView(micDiagnosticText)
+        button("Mikrofon der Fernbedienung prüfen") { startMicrophoneDiagnostic() }
+
         title("Home-Diagnose")
         prefs.getString("diag_app_error", null)?.let { title("Startfehler: $it") }
         val diagnostic = TextView(this).apply { textSize = 18f; setPadding(0, 8, 0, 8) }
