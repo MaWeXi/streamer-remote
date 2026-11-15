@@ -71,6 +71,22 @@ class RemoteKeyService : AccessibilityService() {
                 prefs.edit().putString("last_key", "${KeyEvent.keyCodeToString(event.keyCode)} (${event.keyCode}) um ${stamp()}").apply()
             }
         }
+        if (event.keyCode == KeyEvent.KEYCODE_TV_INPUT) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                try {
+                    startActivity(Intent("com.android.tv.action.VIEW_INPUTS")
+                        .setPackage("com.mitv.livetv")
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    prefs.edit().putString("diag_input",
+                        "Xiaomi-Eingangsmenü direkt geöffnet um ${stamp()}").apply()
+                } catch (error: Exception) {
+                    prefs.edit().putString("diag_input",
+                        "Eingangsmenü fehlgeschlagen: ${error.message}").apply()
+                    return false
+                }
+            }
+            return true
+        }
         if (event.keyCode == RemoteConfig.code(prefs, "home")) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
