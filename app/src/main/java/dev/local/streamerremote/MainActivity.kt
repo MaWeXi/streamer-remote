@@ -46,7 +46,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Streamer Remote 0.13")
+        title("Streamer Remote — Streamer Remote 0.14")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)
@@ -129,7 +129,7 @@ class MainActivity : Activity() {
         val diagnostic = TextView(this).apply { textSize = 18f; setPadding(0, 8, 0, 8) }
         root.addView(diagnostic)
         fun refreshDiagnostic() {
-            val lines = listOf("diag_service", "diag_down", "diag_up", "diag_long", "diag_short", "diag_adb", "last_key")
+            val lines = listOf("diag_service", "diag_down", "diag_up", "diag_long", "diag_short", "diag_adb", "diag_input", "last_key")
                 .map { prefs.getString(it, null) ?: when (it) {
                     "diag_service" -> "Bedienungshilfe: kein Start protokolliert"
                     "diag_down" -> "Home DOWN: nicht empfangen"
@@ -137,6 +137,7 @@ class MainActivity : Activity() {
                     "diag_long" -> "Langer Home-Druck: nicht erkannt"
                     "diag_short" -> "Kurzer Home-Druck: nicht erkannt"
                     "diag_adb" -> "ADB durch Home-Taste: kein Befehl"
+                    "diag_input" -> "Eingangstaste: noch nicht gedrückt"
                     else -> "Letzte andere Taste: keine"
                 } }
             diagnostic.text = lines.joinToString("\n")
@@ -144,7 +145,7 @@ class MainActivity : Activity() {
         refreshDiagnostic()
         button("Home-Diagnose zurücksetzen") {
             prefs.edit().remove("diag_down").remove("diag_up").remove("diag_long")
-                .remove("diag_short").remove("diag_adb").remove("last_key").apply()
+                .remove("diag_short").remove("diag_adb").remove("diag_input").remove("last_key").apply()
             refreshDiagnostic()
         }
         button("Home-Diagnose aktualisieren") { refreshDiagnostic() }
@@ -184,6 +185,7 @@ class MainActivity : Activity() {
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         title("Home: kurz auf HDMI = Streamer-Startseite, kurz auf Xiaomi = Xiaomi-Startseite; lang = Xiaomi-Startseite.")
         title("Apps: auf dem Streamer dessen App-Übersicht, auf Xiaomi dessen Apps. Apps auf Xiaomi lange halten öffnet diese Konfiguration direkt.")
+        title("Eingangstaste: öffnet direkt die Xiaomi-Eingangsauswahl.")
         title("Wichtig: Vorher Button Mapper als Tastenfilter deaktivieren. Nur eine Accessibility-App kann zuverlässig Key-Events filtern.")
         title("ADB muss auf dem Streamer eingeschaltet sein. Beim ersten Verbindungsversuch ggf. ADB-Schlüssel am Streamer autorisieren.")
     }
