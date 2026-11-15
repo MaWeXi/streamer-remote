@@ -1,36 +1,38 @@
-# Streamer Remote — reviewed source (v0.4)
+# Streamer Remote
 
-**Status: GitHub Actions builds a debug APK; no hardware test has been performed.** The original v0.1 ZIP was inspected; this version fixes key handling, input validation, and makes the streamer address and incoming keycodes configurable. The Kadb library compiles; its authentication behavior on the actual streamer remains unverified. Treat the APK as an experimental test build.
+Android-TV-App für den Xiaomi Mini LED S55 im Basic-TV-Modus. Sie empfängt Tasten der Xiaomi-Fernbedienung über eine Bedienungshilfe und sendet ausgewählte Aktionen per authentifiziertem ADB im lokalen Netz an einen Google TV Streamer. Die App läuft auf dem Xiaomi; auf dem Streamer wird keine zusätzliche App installiert. Google-Anmeldung, HTTP-Server, dauerhaft laufender Mac und Sprachassistent sind nicht erforderlich.
 
-## Intended behavior
+## Geprüfter Stand (v0.15)
 
-- On Xiaomi Mini LED S55 in Basic TV mode, short Home (3) invokes Xiaomi Home on release; long Home is consumed and should send `input keyevent 3` to Google TV Streamer.
-- Netflix (193), Prime Video (194), YouTube (190), All Apps (284) each map to a manually entered package name on the streamer. Blank leaves the original key action.
-- Enter the streamer IPv4 address in the app; the field starts empty. ADB port defaults to 5555. Commands go directly over authenticated ADB on the LAN. No Google login, HTTP server, cloud, or continuously running Mac is intended. Voice assistant is out of scope.
+- Auf dem Streamer-HDMI-Bildschirm: kurzes Home sendet Home an den Streamer und hält bzw. stellt die HDMI-Ansicht wieder her. Langes Home öffnet die Xiaomi-Startseite.
+- Auf der Xiaomi-Oberfläche: Home führt zur Xiaomi-Startseite.
+- Netflix, Prime Video und YouTube können jeweils eine frei gewählte, auf dem Streamer installierte App öffnen.
+- Apps öffnet auf dem Streamer die App-Übersicht des Streamers und auf der Xiaomi-Oberfläche die Xiaomi-Apps. Langes Apps auf Xiaomi startet Streamer Remote direkt.
+- Die Eingangstaste (Code 178) öffnet die Xiaomi-Eingangsauswahl direkt.
+- Die Tasten Home 3, Netflix 193, Prime Video 194, YouTube 190 und Apps 284 wurden auf dem Gerät empfangen und getestet. Die Eingangstaste wurde ebenfalls mit der echten Fernbedienung getestet.
+- Die ADB-Identität liegt im privaten dauerhaften App-Speicher. Cache-Löschen und Prozessneustarts erzeugen damit keinen neuen Schlüssel. Eine Deinstallation oder das Löschen von App-Daten entfernt ihn weiterhin.
+- GitHub Actions verwendet einen geschützten, gleichbleibenden Signaturschlüssel. Updates können über die bestehende App installiert werden und behalten Einstellungen und Bedienungshilfe-Zustand.
 
-## Download the test APK\n\nOpen the latest successful [Build debug APK run](https://github.com/MaWeXi/streamer-remote/actions/workflows/build-apk.yml), download the `streamer-remote-debug-apk` artifact, and unzip it to obtain `app-debug.apk`. No Android Studio installation on your Mac is needed. Each cloud build uses a fresh debug signing key, so a later APK may require uninstalling the old test version first (which clears its settings). This APK was compiled but has not been installed or tested on the Xiaomi or streamer.\n\n## Initial ADB setup on the streamer
+Die Erkennung „Streamer-Bildschirm“ nutzt die Xiaomi-Live-TV/HDMI-Oberfläche. Andere TV-Eingänge wurden dafür noch nicht separat geprüft.
 
-1. On Google TV Streamer, enable Developer options and ADB debugging. Keep streamer and Xiaomi on the same trusted LAN. Reserve its chosen IP address in the router.
-2. Confirm which ADB mode the streamer offers. For classic TCP ADB at port 5555, authorize the *Xiaomi app's own ADB key* on the streamer's screen when the app first connects. A Mac's previously authorized key does **not** authorize the app. The current source has no proven persistent key setup, so this is a required on-device validation.
-3. If the streamer offers Android's newer Wireless debugging pairing-code flow instead, its pairing and connection ports can differ from 5555. This source does not implement pairing-code setup; do not assume changing the port is sufficient.
-4. Do not forward ADB port 5555 from the router to the internet. Debugging may need to be re-enabled after a streamer restart.
+## APK installieren oder aktualisieren
 
-## Xiaomi installation and first test
+Den neuesten erfolgreichen [Build debug APK](https://github.com/MaWeXi/streamer-remote/actions/workflows/build-apk.yml) öffnen, das Artefakt `streamer-remote-debug-apk` herunterladen und entpacken. `app-debug.apk` auf dem Xiaomi als Update installieren. **Nicht deinstallieren und keine App-Daten löschen**, wenn die vorhandene Konfiguration erhalten bleiben soll. Android Studio auf dem Mac ist dafür nicht nötig.
 
-1. Enable Developer options and USB/network debugging on the Xiaomi if available. Install the built APK using `adb -s XIAOMI_IP:5555 install -r app/build/outputs/apk/debug/app-debug.apk`, or copy the APK to the TV and open it with a file manager that permits app installs from that source.
-2. Launch Streamer Remote on the Xiaomi. Enter the streamer address and set mappings and incoming button codes, then save. Mappings are **package names**, not display names; find them with an already authorized ADB client using `adb shell pm list packages` on the streamer.
-3. Disable Button Mapper's accessibility service, then enable Streamer Remote under Xiaomi Settings > Accessibility. Select **Home auf Streamer testen**. Confirm any ADB authorization prompt on the streamer.
-4. Verify short Home still opens Xiaomi Home, long Home opens streamer Home, and each of the four app keys opens its chosen app. Test repeated presses and a restart of both devices. If Home never reaches the service, Xiaomi intercepts it before this app can act; this cannot be repaired by the timer alone.
+Alternativ kann ein bereits verbundenes ADB auf einem Computer die APK mit `adb -s XIAOMI_IP:5555 install -r app-debug.apk` installieren. Das ist für den normalen Betrieb nicht nötig.
 
-## Findings from source review
+## Einmalige Einrichtung
 
-- v0.1 used only `KeyEvent.isLongPress`, which some remotes never set. v0.3 also measures press duration using Android's long-press timeout.
-- v0.1 accepted invalid package names and silently ignored them later. v0.3 validates on save.
-- Short Home may be processed by Xiaomi immediately on key-down, before long press is known. Thus the device may switch to Xiaomi Home even when long Home eventually sends a streamer command. Only on-device testing can establish the actual behavior.
-- The selected Kadb library (`com.flyfishxu:kadb:2.1.4`) compiles in the cloud build. Persistent authenticated ADB identity has not been demonstrated on the devices.
-- Only one accessibility key-filter service should be active during testing.
+1. Auf dem Streamer ADB-Debugging aktivieren und beide Geräte im selben lokalen Netz lassen. Die Streamer-IP möglichst im Router reservieren.
+2. Streamer Remote auf dem Xiaomi installieren, Streamer-IP und ADB-Port (standardmäßig 5555) eintragen und speichern.
+3. Die Bedienungshilfe „Streamer Remote“ auf dem Xiaomi aktivieren. Beim ersten ADB-Befehl den Schlüssel der **Xiaomi-App** auf dem Streamer erlauben. Ein zuvor erlaubter Mac-Schlüssel genügt dafür nicht.
+4. In Streamer Remote die App-Tasten-Umleitung einschalten. Die Ziel-Apps aus der vom Streamer abgefragten Liste wählen; Paketnamen müssen nicht eingetippt werden. Für die Apps-Taste kann „App-Übersicht“ gewählt werden.
+5. Die Tasten auf dem Streamer-HDMI-Bildschirm testen. Die Diagnoseansichten der App zeigen empfangene Tastencodes und ADB-Ergebnisse.
 
-## Configurable incoming keycodes
+Die aktuelle Verbindung nutzt klassisches ADB über TCP. Der Streamer-Port darf nicht am Router ins Internet freigegeben werden. Ein Google-TV-Pairing-Code-Verfahren ist nicht implementiert.
 
-The app also displays the last keycode received by its accessibility service. After pressing a remote button, reopen the app and choose **Letzten Tastencode anzeigen**. If it stays unchanged, that button did not reach the service.\n\nThe five incoming button codes default to Home 3, Netflix 193, Prime Video 194, YouTube 190, and All Apps 284. Each can be changed in the app. Codes must be valid and distinct. The outgoing ADB Home command remains Android keycode 3.
-\n## Home test on the Xiaomi\n\nThe built-in **Home auf Streamer testen** button proves only that the ADB command reaches the streamer; it does not test key interception on the Xiaomi. In v0.4 the service consumes Home down and up, sends long Home only to the streamer, and invokes Xiaomi Home only after a short release. Long Home must not open the Xiaomi Settings menu. If the Xiaomi still opens its own Home or Settings menu, inspect the last received keycode; the OEM may intercept Home before the service. The app does not request an HDMI input switch.\n
+## Xiaomi-Menüfehler und Wiederherstellung
+
+Der Xiaomi-Launcher zeigt beim normalen Öffnen der App gelegentlich „Fehler beim Laden des Menüs“. Im Xiaomi-Protokoll steht dabei `EntityMenuAssetFragment: Unable to load distributors` mit `net::ERR_CONNECTION_REFUSED`. Ein direkter Start von Streamer Remote funktioniert. Als auf dem Gerät getesteter Zugang öffnet **langes Apps auf der Xiaomi-Oberfläche** die Konfiguration direkt und umgeht dieses Xiaomi-Menü. Auch Xiaomi-Einstellungen → Apps → Streamer Remote → Öffnen funktioniert.
+
+„Beenden erzwingen“ entfernt auf diesem Xiaomi die Bedienungshilfe aus den aktiven Diensten. Danach fängt die App keine Fernbedienungstasten mehr ab, obwohl der ADB-Schlüssel noch gespeichert ist. Die Bedienungshilfe muss in den Xiaomi-Einstellungen erneut eingeschaltet werden; die App zeigt ihren Status und öffnet die Bedienungshilfe-Einstellungen. Cache-Löschen ist zur Wiederherstellung der ADB-Freigabe nicht erforderlich.
