@@ -37,8 +37,13 @@ class RemoteKeyService : AccessibilityService() {
     private var longHomeSent = false
     private var viewingTvInput = false
     private var appsDown = false
+    private var appsDownAt = 0L
+    private var appsLongHandled = false
     private val openConfigFromApps = Runnable {
-        if (appsDown && !viewingTvInput) {
+        if (appsDown && !appsLongHandled) {
+            appsLongHandled = true
+            getSharedPreferences("remote", MODE_PRIVATE).edit()
+                .putString("diag_action_apps", "Langes Apps: Streamer Remote direkt geöffnet").apply()
             startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
@@ -163,21 +168,47 @@ class RemoteKeyService : AccessibilityService() {
                 KeyEvent.ACTION_DOWN -> {
                     if (event.repeatCount == 0) {
                         appsDown = true
+                        appsDownAt = SystemClock.uptimeMillis()
+                        appsLongHandled = false
+                        prefs.edit().putString("diag_key_apps",
+                            "Apps auf Xiaomi um ${stamp()} (Code ${event.keyCode})").apply()
                         handler.removeCallbacks(openConfigFromApps)
                         handler.postDelayed(openConfigFromApps,
                             ViewConfiguration.getLongPressTimeout().toLong())
                     }
+                    return true
                 }
                 KeyEvent.ACTION_UP -> {
-                    appsDown = false
                     handler.removeCallbacks(openConfigFromApps)
+                    val wasDown = appsDown
+                    appsDown = false
+                    if (wasDown && !appsLongHandled) {
+                        val heldLong = SystemClock.uptimeMillis() - appsDownAt >=
+                            ViewConfiguration.getLongPressTimeout()
+                        if (heldLong) {
+                            appsLongHandled = true
+                            startActivity(Intent(this, MainActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            prefs.edit().putString("diag_action_apps",
+                                "Langes Apps: Streamer Remote direkt geöffnet").apply()
+                        } else {
+                            try {
+                                startActivity(Intent(Intent.ACTION_ALL_APPS)
+                                    .setPackage("com.google.android.apps.tv.launcherx")
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                prefs.edit().putString("diag_action_apps",
+                                    "Kurzes Apps: Xiaomi-App-Übersicht geöffnet").apply()
+                            } catch (error: Exception) {
+                                prefs.edit().putString("diag_action_apps",
+                                    "Xiaomi-Apps fehlgeschlagen: ${error.message}").apply()
+                            }
+                        }
+                    }
+                    appsLongHandled = false
+                    return true
                 }
             }
-            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
-                prefs.edit().putString("diag_key_apps", "Apps auf Xiaomi um ${stamp()} (Code ${event.keyCode})").apply()
-                prefs.edit().putString("diag_action_apps", "Xiaomi-App-Übersicht; lang = Streamer Remote").apply()
-            }
-            return false
+            return true
         }
         if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
             prefs.edit().putString("diag_key_$slot",
