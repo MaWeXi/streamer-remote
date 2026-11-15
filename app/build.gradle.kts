@@ -6,7 +6,7 @@ android {
     namespace = "dev.local.streamerremote"
     compileSdk = 37
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-    defaultConfig { applicationId = "dev.local.streamerremote"; minSdk = 26; targetSdk = 32; versionCode = 11; versionName = "0.13" }
+    defaultConfig { applicationId = "dev.local.streamerremote"; minSdk = 26; targetSdk = 32; versionCode = 12; versionName = "0.14" }
     val signingFile = System.getenv("STREAMER_REMOTE_SIGNING_FILE")
     if (!signingFile.isNullOrBlank()) {
         signingConfigs {
