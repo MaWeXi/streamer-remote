@@ -170,8 +170,19 @@ class MainActivity : Activity() {
             }.apply()
             refreshAppDiagnostic()
         }
+        val serviceStatus = TextView(this).apply { textSize = 18f }
+        root.addView(serviceStatus)
+        fun refreshServiceStatus() {
+            val enabled = Settings.Secure.getString(contentResolver,
+                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+                .contains("dev.local.streamerremote/dev.local.streamerremote.RemoteKeyService")
+            serviceStatus.text = if (enabled) "Bedienungshilfe: aktiv" else
+                "Bedienungshilfe: aus. Nach „Beenden erzwingen“ auf Xiaomi erneut einschalten."
+        }
+        refreshServiceStatus()
+        button("Bedienungshilfe-Status aktualisieren") { refreshServiceStatus() }
         button("Bedienungshilfen öffnen") { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
-        title("Home: kurz = Xiaomi-Startseite, lang = Streamer-Startseite.")
+        title("Home: kurz auf HDMI = Streamer-Startseite, kurz auf Xiaomi = Xiaomi-Startseite; lang = Xiaomi-Startseite.")
         title("Apps: auf dem Streamer dessen App-Übersicht, auf Xiaomi dessen Apps. Apps auf Xiaomi lange halten öffnet diese Konfiguration direkt.")
         title("Wichtig: Vorher Button Mapper als Tastenfilter deaktivieren. Nur eine Accessibility-App kann zuverlässig Key-Events filtern.")
         title("ADB muss auf dem Streamer eingeschaltet sein. Beim ersten Verbindungsversuch ggf. ADB-Schlüssel am Streamer autorisieren.")
