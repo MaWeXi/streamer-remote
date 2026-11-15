@@ -50,7 +50,7 @@ object RemoteCommand {
                         }
                         Thread.sleep(delay)
                         if (!running.get()) break
-                        val repeated = adb.shell("input keyevent $keyCode")
+                        val repeated = adb.shell("input keyevent --longpress $keyCode")
                         if (repeated.exitCode != 0) error(repeated.output.take(160))
                     }
                 }

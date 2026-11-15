@@ -114,7 +114,7 @@ class MainActivity : Activity() {
             root.addView(Button(this).apply { text = label; setOnClickListener { action() } })
         }
 
-        title("Streamer Remote — Streamer Remote 0.20")
+        title("Streamer Remote — Streamer Remote 0.21")
         val host = field("IP-Adresse des Google TV Streamers", prefs.getString("host", "").orEmpty())
         val port = field("ADB-Port", prefs.getInt("port", 5555).toString(), numeric = true)
         val homeCode = field("Tastencode Home", prefs.getInt("code_home", 3).toString(), numeric = true)

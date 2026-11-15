@@ -85,7 +85,11 @@ class RemoteKeyService : AccessibilityService() {
             .putString("diag_apps_context", "Sichtbare Oberfläche: $pkg; TV-Eingang: $viewingTvInput").apply()
     }
     private fun stopNavigationRepeat() {
-        activeNavigationKey?.let { RemoteCommand.stopAcceleratedKey(it) }
+        activeNavigationKey?.let { keyCode ->
+            RemoteCommand.stopAcceleratedKey(keyCode)
+            getSharedPreferences("remote", MODE_PRIVATE).edit()
+                .putString("diag_navigation_action", "Beschleunigte Wiederholung beendet: Keycode " + keyCode).apply()
+        }
         activeNavigationKey = null
     }
 
