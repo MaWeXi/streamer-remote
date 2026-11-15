@@ -119,8 +119,41 @@ class RemoteKeyService : AccessibilityService() {
         prefs.edit().putString("diag_navigation", lines.joinToString("\n")).apply()
     }
 
+    private fun refreshViewingContextFromWindows(): String {
+        val visiblePackages = linkedSetOf<String>()
+        try {
+            rootInActiveWindow?.let { root ->
+                root.packageName?.toString()?.let(visiblePackages::add)
+                root.recycle()
+            }
+        } catch (_: Exception) { }
+        try {
+            windows.forEach { window ->
+                val root = window.root
+                if (root != null) {
+                    root.packageName?.toString()?.let(visiblePackages::add)
+                    root.recycle()
+                }
+            }
+        } catch (_: Exception) { }
+        val context = when {
+            "com.mitv.livetv" in visiblePackages -> true
+            visiblePackages.any { it in setOf("com.google.android.apps.tv.launcherx", packageName, "com.android.tv.settings") } -> false
+            else -> null
+        }
+        if (context != null) {
+            viewingTvInput = context
+            getSharedPreferences("remote", MODE_PRIVATE).edit()
+                .putBoolean("viewing_tv_input", context)
+                .putString("diag_apps_context", "Sichtbare Fenster: " + visiblePackages.joinToString(", ") +
+                    "; TV-Eingang: " + context).apply()
+        }
+        return visiblePackages.joinToString(", ").ifBlank { "unbekannt" }
+    }
+
     override fun onKeyEvent(event: KeyEvent): Boolean {
         recordDiagnosticKey(event)
+        val currentWindows = refreshViewingContextFromWindows()
         val navigationKeys = setOf(
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT
@@ -128,6 +161,11 @@ class RemoteKeyService : AccessibilityService() {
         if (activeNavigationKey == event.keyCode && event.action == KeyEvent.ACTION_UP) {
             stopNavigationRepeat()
             return true
+        }
+        if (event.keyCode in navigationKeys && !viewingTvInput &&
+            event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+            getSharedPreferences("remote", MODE_PRIVATE).edit()
+                .putString("diag_navigation_action", "Pfeiltaste durchgelassen; Fenster: " + currentWindows).apply()
         }
         if (event.keyCode in navigationKeys && viewingTvInput) {
             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
