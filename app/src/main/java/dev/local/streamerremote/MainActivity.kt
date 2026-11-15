@@ -52,12 +52,20 @@ class MainActivity : Activity() {
                 }
                 val rms = if (frames == 0L) 0.0 else kotlin.math.sqrt(squares / frames)
                 runOnUiThread {
-                    micDiagnosticText?.text = "Aufnahme beendet. Spitzenpegel: $peak / 32767; Durchschnitt: " +
-                        "%.0f".format(rms) + ". " +
+                    val summary = "Aufnahme beendet. Spitzenpegel: " + peak +
+                        " / 32767; Durchschnitt: " + "%.0f".format(rms) + ". " +
                         if (peak > 400) "Audio kam an." else "Kein messbarer Ton am App-Audioeingang."
+                    getSharedPreferences("remote", Context.MODE_PRIVATE).edit()
+                        .putString("diag_mic", summary).apply()
+                    micDiagnosticText?.text = summary
                 }
             } catch (error: Throwable) {
-                runOnUiThread { micDiagnosticText?.text = "Mikrofontest fehlgeschlagen: " + error.message }
+                runOnUiThread {
+                    val summary = "Mikrofontest fehlgeschlagen: " + error.message
+                    getSharedPreferences("remote", Context.MODE_PRIVATE).edit()
+                        .putString("diag_mic", summary).apply()
+                    micDiagnosticText?.text = summary
+                }
             } finally {
                 try { recorder?.stop() } catch (_: Exception) {}
                 recorder?.release()
@@ -197,9 +205,17 @@ class MainActivity : Activity() {
             prefs.edit().remove("diag_navigation").apply()
             refreshNavigationDiagnostic()
         }
-        micDiagnosticText = TextView(this).apply { textSize = 16f; setPadding(0, 8, 0, 8) }
+        micDiagnosticText = TextView(this).apply {
+            textSize = 16f
+            setPadding(0, 8, 0, 8)
+            text = prefs.getString("diag_mic", "Noch kein Mikrofontest durchgeführt.")
+        }
         root.addView(micDiagnosticText)
         button("Mikrofon der Fernbedienung prüfen") { startMicrophoneDiagnostic() }
+        button("Mikrofontest-Ergebnis zurücksetzen") {
+            prefs.edit().remove("diag_mic").apply()
+            micDiagnosticText?.text = "Noch kein Mikrofontest durchgeführt."
+        }
 
         title("Home-Diagnose")
         prefs.getString("diag_app_error", null)?.let { title("Startfehler: $it") }
