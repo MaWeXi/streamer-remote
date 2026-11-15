@@ -17,6 +17,22 @@ class RemoteKeyService : AccessibilityService() {
     private var homeDown = false
     private var homeDownAt = 0L
     private var homeStartedOnTvInput = false
+    private var returnToTvAfterShortHome = false
+    private val returnToTv = Runnable {
+        if (returnToTvAfterShortHome) {
+            returnToTvAfterShortHome = false
+            try {
+                startActivity(Intent().setClassName("com.mitv.livetv",
+                    "com.mitv.livetv.tv.MainActivity")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+                getSharedPreferences("remote", MODE_PRIVATE).edit()
+                    .putString("diag_home_return", "Nach kurzem Home zur TV-Eingangsansicht zurückgekehrt").apply()
+            } catch (error: Exception) {
+                getSharedPreferences("remote", MODE_PRIVATE).edit()
+                    .putString("diag_home_return", "Rücksprung fehlgeschlagen: ${error.message}").apply()
+            }
+        }
+    }
     private var longHomeSent = false
     private var viewingTvInput = false
     private var appsDown = false
@@ -30,6 +46,8 @@ class RemoteKeyService : AccessibilityService() {
             longHomeSent = true
             getSharedPreferences("remote", MODE_PRIVATE).edit()
                 .putString("diag_long", "Langer Home-Druck erkannt um ${stamp()}").apply()
+            returnToTvAfterShortHome = false
+            handler.removeCallbacks(returnToTv)
             performGlobalAction(GLOBAL_ACTION_HOME)
         }
     }
@@ -51,6 +69,10 @@ class RemoteKeyService : AccessibilityService() {
             "com.mitv.livetv" -> viewingTvInput = true
             "com.google.android.apps.tv.launcherx", packageName, "com.android.tv.settings" -> viewingTvInput = false
         }
+        if (pkg == "com.google.android.apps.tv.launcherx" && returnToTvAfterShortHome) {
+            handler.removeCallbacks(returnToTv)
+            handler.postDelayed(returnToTv, 150L)
+        }
         getSharedPreferences("remote", MODE_PRIVATE).edit()
             .putBoolean("viewing_tv_input", viewingTvInput)
             .putString("diag_apps_context", "Sichtbare Oberfläche: $pkg; TV-Eingang: $viewingTvInput").apply()
@@ -58,6 +80,7 @@ class RemoteKeyService : AccessibilityService() {
     override fun onInterrupt() = Unit
     override fun onDestroy() {
         handler.removeCallbacks(longHome)
+        handler.removeCallbacks(returnToTv)
         handler.removeCallbacks(openConfigFromApps)
         super.onDestroy()
     }
@@ -112,12 +135,18 @@ class RemoteKeyService : AccessibilityService() {
                     val wasLong = longHomeSent || SystemClock.uptimeMillis() - homeDownAt >= ViewConfiguration.getLongPressTimeout()
                     if (wasDown && !longHomeSent && wasLong) {
                         prefs.edit().putString("diag_long", "Langer Home-Druck beim Loslassen erkannt um ${stamp()}").apply()
+                        returnToTvAfterShortHome = false
+                        handler.removeCallbacks(returnToTv)
                         performGlobalAction(GLOBAL_ACTION_HOME)
                     }
                     if (wasDown && !wasLong) {
                         prefs.edit().putString("diag_short", "Kurzer Home-Druck um ${stamp()}").apply()
-                        if (homeStartedOnTvInput) RemoteCommand.home(this)
-                        else performGlobalAction(GLOBAL_ACTION_HOME)
+                        if (homeStartedOnTvInput) {
+                            returnToTvAfterShortHome = true
+                            RemoteCommand.home(this)
+                            handler.removeCallbacks(returnToTv)
+                            handler.postDelayed(returnToTv, 900L)
+                        } else performGlobalAction(GLOBAL_ACTION_HOME)
                     }
                     longHomeSent = false
                     return true
