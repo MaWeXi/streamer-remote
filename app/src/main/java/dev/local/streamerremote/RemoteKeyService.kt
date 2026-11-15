@@ -16,6 +16,7 @@ class RemoteKeyService : AccessibilityService() {
     private val handler = Handler(Looper.getMainLooper())
     private var homeDown = false
     private var homeDownAt = 0L
+    private var homeStartedOnTvInput = false
     private var longHomeSent = false
     private var viewingTvInput = false
     private var appsDown = false
@@ -29,7 +30,7 @@ class RemoteKeyService : AccessibilityService() {
             longHomeSent = true
             getSharedPreferences("remote", MODE_PRIVATE).edit()
                 .putString("diag_long", "Langer Home-Druck erkannt um ${stamp()}").apply()
-            RemoteCommand.home(this)
+            performGlobalAction(GLOBAL_ACTION_HOME)
         }
     }
 
@@ -76,6 +77,7 @@ class RemoteKeyService : AccessibilityService() {
                     if (event.repeatCount == 0) {
                         prefs.edit().putString("diag_down", "Home DOWN empfangen um ${stamp()} (Code ${event.keyCode})").apply()
                         homeDown = true
+                        homeStartedOnTvInput = viewingTvInput
                         homeDownAt = SystemClock.uptimeMillis()
                         longHomeSent = false
                         handler.removeCallbacks(longHome)
@@ -94,11 +96,12 @@ class RemoteKeyService : AccessibilityService() {
                     val wasLong = longHomeSent || SystemClock.uptimeMillis() - homeDownAt >= ViewConfiguration.getLongPressTimeout()
                     if (wasDown && !longHomeSent && wasLong) {
                         prefs.edit().putString("diag_long", "Langer Home-Druck beim Loslassen erkannt um ${stamp()}").apply()
-                        RemoteCommand.home(this)
+                        performGlobalAction(GLOBAL_ACTION_HOME)
                     }
                     if (wasDown && !wasLong) {
                         prefs.edit().putString("diag_short", "Kurzer Home-Druck um ${stamp()}").apply()
-                        performGlobalAction(GLOBAL_ACTION_HOME)
+                        if (homeStartedOnTvInput) RemoteCommand.home(this)
+                        else performGlobalAction(GLOBAL_ACTION_HOME)
                     }
                     longHomeSent = false
                     return true
